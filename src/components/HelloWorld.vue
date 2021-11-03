@@ -1,58 +1,115 @@
 <template>
-  <div class="hello">
-    <h1>{{ msg }}</h1>
-    <p>
-      For a guide and recipes on how to configure / customize this project,<br>
-      check out the
-      <a href="https://cli.vuejs.org" target="_blank" rel="noopener">vue-cli documentation</a>.
-    </p>
-    <h3>Installed CLI Plugins</h3>
-    <ul>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-babel" target="_blank" rel="noopener">babel</a></li>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-eslint" target="_blank" rel="noopener">eslint</a></li>
-    </ul>
-    <h3>Essential Links</h3>
-    <ul>
-      <li><a href="https://vuejs.org" target="_blank" rel="noopener">Core Docs</a></li>
-      <li><a href="https://forum.vuejs.org" target="_blank" rel="noopener">Forum</a></li>
-      <li><a href="https://chat.vuejs.org" target="_blank" rel="noopener">Community Chat</a></li>
-      <li><a href="https://twitter.com/vuejs" target="_blank" rel="noopener">Twitter</a></li>
-      <li><a href="https://news.vuejs.org" target="_blank" rel="noopener">News</a></li>
-    </ul>
-    <h3>Ecosystem</h3>
-    <ul>
-      <li><a href="https://router.vuejs.org" target="_blank" rel="noopener">vue-router</a></li>
-      <li><a href="https://vuex.vuejs.org" target="_blank" rel="noopener">vuex</a></li>
-      <li><a href="https://github.com/vuejs/vue-devtools#vue-devtools" target="_blank" rel="noopener">vue-devtools</a></li>
-      <li><a href="https://vue-loader.vuejs.org" target="_blank" rel="noopener">vue-loader</a></li>
-      <li><a href="https://github.com/vuejs/awesome-vue" target="_blank" rel="noopener">awesome-vue</a></li>
-    </ul>
-  </div>
+  <main>
+    <h1>Zoom Meeting SDK Sample Vue.js 2</h1>
+    <button @click="getSignature">Join Meeting</button>
+  </main>
 </template>
 
 <script>
+import axios from "axios";
+
 export default {
   name: 'HelloWorld',
-  props: {
-    msg: String
+  created () {
+    this.ZoomMtg.setZoomJSLib('https://source.zoom.us/2.0.1/lib', '/av');
+    this.ZoomMtg.preLoadWasm();
+    this.ZoomMtg.prepareWebSDK();
+    // loads language files, also passes any error messages to the ui
+    this.ZoomMtg.i18n.load('en-US');
+    this.ZoomMtg.i18n.reload('en-US');
+  },
+  mounted() {
+    this.ZoomMtg.inMeetingServiceListener("onUserJoin", (data) => {
+      console.log("inMeetingServiceListener onUserJoin", data);
+    });
+  },
+  data () {
+    return {
+      apiKey: "",
+      leaveUrl: "http://localhost:8080",
+      meetingNumber: "123456789",
+      passWord: "",
+      role: 0,
+      signatureEndpoint: "",
+      userEmail: "",
+      userName: "Vue.js",
+      // pass in the registrant's token if your meeting or webinar requires registration. More info here:
+      // Meetings: https://marketplace.zoom.us/docs/sdk/native-sdks/web/build/meetings/join#join-registered
+      // Webinars: https://marketplace.zoom.us/docs/sdk/native-sdks/web/build/webinars/join#join-registered-webinar
+      registrantToken: ''
+    }
+  },
+  methods: {
+    getSignature() {
+      axios.get(this.signatureEndpoint, {
+        meetingNumber: this.meetingNumber,
+        role: this.role
+      })
+          .then(res => {
+            console.log(res.data.signature);
+            this.startMeeting(res.data.signature);
+          })
+          .catch(error => {
+            console.log(error);
+          });
+    },
+    startMeeting(signature) {
+      document.getElementById("zmmtg-root").style.display = "block";
+
+      this.ZoomMtg.init({
+        leaveUrl: this.leaveUrl,
+        success: (success) => {
+          console.log(success);
+          this.ZoomMtg.join({
+            meetingNumber: this.meetingNumber,
+            userName: this.userName,
+            signature: signature,
+            apiKey: this.apiKey,
+            userEmail: this.userEmail,
+            passWord: this.passWord,
+            tk: this.registrantToken,
+            success: (success) => {
+              console.log(success);
+            },
+            error: (error) => {
+              console.log(error);
+            }
+          });
+        },
+        error: (error) => {
+          console.log(error);
+        }
+      });
+    }
   }
 }
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-h3 {
-  margin: 40px 0 0;
+main {
+  width: 70%;
+  margin: auto;
+  text-align: center;
 }
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-li {
+
+main button {
+  margin-top: 20px;
+  background-color: #2D8CFF;
+  color: #ffffff;
+  text-decoration: none;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-left: 40px;
+  padding-right: 40px;
   display: inline-block;
-  margin: 0 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: none;
+  outline: none;
 }
-a {
-  color: #42b983;
+
+main button:hover {
+  background-color: #2681F2;
 }
 </style>
